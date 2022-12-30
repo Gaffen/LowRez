@@ -15,9 +15,9 @@ class FlameTex {
 	worleyNoise = null;
 	offset = 0;
 	length = TEX_HEIGHT * 4;
-	noiseBorder = TEX_HEIGHT * 4 * 0.2;
+	noiseBorder = Math.round(TEX_HEIGHT * 4 * 0.2);
 	speed = 128;
-	pointCount = 40;
+	pointCount = 50;
 	voronoiPoints = [];
 	constructor(pixelRatio) {
 		this.noise = makeNoise3D(Date.now());;
@@ -101,13 +101,13 @@ class FlameTex {
 
 	genVoronoiPoints() {
 		const worleyNoise = new Worley({
-		    width: this.length, // In pixels
+		    width: this.length + (this.noiseBorder * 2), // In pixels
 		    height: TEX_WIDTH, // In pixels
 		    threshold: TEX_WIDTH * 0.5,
 		    colors: [[0, 0, 0], [255, 255, 255]],
 		    // colors: [[255, 255, 255], [0, 0, 0]],
-		    alpha: true
-		    // crests: this.pointCount,
+		    alpha: true,
+		    crests: 0
 		});
 		for(let i = 0; i < this.pointCount; i++){
 			let found = false;
@@ -117,8 +117,8 @@ class FlameTex {
 
 				const clashes = this.voronoiPoints.filter(point => {
 					return (
-						x > point.x - MARGIN && 
-						x < point.x + MARGIN && 
+						x + this.noiseBorder > point.x - MARGIN && 
+						x + this.noiseBorder < point.x + MARGIN && 
 						y > point.y - MARGIN &&
 						y < point.y + MARGIN
 					)
@@ -127,51 +127,58 @@ class FlameTex {
 				if(clashes.length === 0){
 					found = true;
 					this.voronoiPoints.push({
-						x,
+						x: x + this.noiseBorder,
 						y
 					})
-					worleyNoise.addCrest(x, y, false);
+					worleyNoise.addCrest(x + this.noiseBorder, y, false);
 				}
 			}
 		}
 
 		this.voronoiPoints.filter(point => {
-			return point.x < this.length * 0.3 || point.x > this.length * 0.6
+			return point.x < (this.noiseBorder * 2) || point.x > this.length
 		}).forEach(point => {
 			worleyNoise.addCrest(
-				point.x < this.length * 0.3 ? 
-					point.x + this.length : 
-					-point.x, 
+				point.x < (this.noiseBorder * 2) ? point.x + (this.length) : point.x - this.length, 
 				point.y, 
 				false
 			);
 		})
 
-
-		this.worleyNoise = worleyNoise;
+		console.log(this.noiseBorder)
 
 		// Full texture access
 		worleyNoise.Texture.ImageData().then((imgData) => {
-		    // Do something like ctx.putImageData(imgData)
-				const texCtx = this.noiseTex.getContext("2d");
-		    console.log(imgData); // {width: Number ,height: Number ,data: Uint8Array => [0,1,2....n]
-		    // texCtx.globalCompositeOperation = 'multiply'
-		    // texCtx.putImageData(imgData, 0, 0)
-		    // texCtx.globalCompositeOperation = 'source-over'
-				// this.displayVoronoiPoints();
-		    this.offset = this.length * 0.9
-				this.update(0)
+			const texCtx = this.noiseTex.getContext("2d");
+			const tempCanvas = document.createElement('canvas')
+			const ctx = tempCanvas.getContext('2d')
+			tempCanvas.width = imgData.width;
+			tempCanvas.height = imgData.height;
+			tempCanvas.style.position = 'absolute';
+			tempCanvas.style.top = `${TEX_WIDTH}px`;
+			ctx.putImageData(imgData, 0, 0);
+			// document.querySelector('body').appendChild(tempCanvas)
+			// console.log(imgData);
+	    // texCtx.globalCompositeOperation = 'multiply'
+	    texCtx.drawImage(tempCanvas, this.noiseBorder, 0, this.length, TEX_WIDTH, 0, 0, this.length, TEX_WIDTH)
+	    // texCtx.globalCompositeOperation = 'source-over'
+			this.displayVoronoiPoints(ctx);
+			this.update(0)
+			console.log(this.noiseBorder)
 		})
-		console.log(this.voronoiPoints)
+		this.worleyNoise = worleyNoise;
+		console.log(this.voronoiPoints.length, worleyNoise.crests.length)
 	}
 
-	displayVoronoiPoints() {
-		const ctx = this.noiseTex.getContext("2d")
-		this.worleyNoise.crests.forEach(point => {
-			ctx.arc(point[0], point[1], 2.5, 0, 2 * Math.PI);
-			ctx.fillStyle = '#fff'
-			ctx.fill()
-			ctx.closePath()
+	displayVoronoiPoints(ctx) {
+		// const ctx = this.noiseTex.getContext("2d")
+		this.worleyNoise.crests.forEach((point, i) => {
+			let region = new Path2D();
+			ctx.fillStyle = i >= this.voronoiPoints.length ? '#ff0000' : '#ffffff'
+			region.arc(point[0], point[1], 2.5, 0, 2 * Math.PI);
+			region.closePath()
+			ctx.fill(region)
+			console.log(ctx.fillStyle)
 		});
 	}
 

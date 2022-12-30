@@ -124,7 +124,7 @@ function rendeLoop() {
 
     requestAnimationFrame(rendeLoop) //loop the render function
 
-    // tex.update(delta);
+    tex.update(delta);
     
 }
 
