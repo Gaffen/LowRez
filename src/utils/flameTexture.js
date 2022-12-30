@@ -61,7 +61,7 @@ class FlameTex {
 		for (let x = 0; x < circumference; x++) {
 		  for (let y = 0; y < TEX_WIDTH; y++) {
 		    const i = (x + y * circumference) * 4;
-		    const val = (((data[x][y] + 1) / 2) * 255) * contrast + intercept;
+		    const val = (((data[x][y] + 1) / 2) * 255) // * contrast + intercept;
 		    imgdata.data[i] = val;
 		    imgdata.data[i + 1] = val;
 		    imgdata.data[i + 2] = val;
@@ -103,10 +103,10 @@ class FlameTex {
 		const worleyNoise = new Worley({
 		    width: this.length + (this.noiseBorder * 2), // In pixels
 		    height: TEX_WIDTH, // In pixels
-		    threshold: TEX_WIDTH * 0.5,
+		    threshold: TEX_WIDTH * 0.33,
 		    colors: [[0, 0, 0], [255, 255, 255]],
 		    // colors: [[255, 255, 255], [0, 0, 0]],
-		    alpha: true,
+		    alpha: false,
 		    crests: 0
 		});
 		for(let i = 0; i < this.pointCount; i++){
@@ -145,29 +145,29 @@ class FlameTex {
 			);
 		})
 
-		console.log(this.noiseBorder)
-
 		// Full texture access
 		worleyNoise.Texture.ImageData().then((imgData) => {
 			const texCtx = this.noiseTex.getContext("2d");
 			const tempCanvas = document.createElement('canvas')
 			const ctx = tempCanvas.getContext('2d')
+			ctx.fillStyle = '#000'
+			ctx.fill();
 			tempCanvas.width = imgData.width;
 			tempCanvas.height = imgData.height;
 			tempCanvas.style.position = 'absolute';
 			tempCanvas.style.top = `${TEX_WIDTH}px`;
 			ctx.putImageData(imgData, 0, 0);
-			// document.querySelector('body').appendChild(tempCanvas)
+	    texCtx.globalCompositeOperation = 'difference'
+			ctx.drawImage(tempCanvas, 0, 0);
+			document.querySelector('body').appendChild(tempCanvas)
 			// console.log(imgData);
-	    // texCtx.globalCompositeOperation = 'multiply'
+	    texCtx.globalCompositeOperation = 'color-dodge'
 	    texCtx.drawImage(tempCanvas, this.noiseBorder, 0, this.length, TEX_WIDTH, 0, 0, this.length, TEX_WIDTH)
-	    // texCtx.globalCompositeOperation = 'source-over'
+	    texCtx.globalCompositeOperation = 'source-over'
 			this.displayVoronoiPoints(ctx);
 			this.update(0)
-			console.log(this.noiseBorder)
 		})
 		this.worleyNoise = worleyNoise;
-		console.log(this.voronoiPoints.length, worleyNoise.crests.length)
 	}
 
 	displayVoronoiPoints(ctx) {
@@ -178,7 +178,6 @@ class FlameTex {
 			region.arc(point[0], point[1], 2.5, 0, 2 * Math.PI);
 			region.closePath()
 			ctx.fill(region)
-			console.log(ctx.fillStyle)
 		});
 	}
 
